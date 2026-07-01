@@ -2,32 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Core Design Tokens */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --bg: #f6f1e8;
+  --surface: #fffdf8;
+  --surface-2: #f0e8db;
+  --ink: #102016;
+  --muted: #566258;
+  --pine: #0d1f13;
+  --moss: #173022;
+  --leaf: #4d9e57;
+  --leaf-bright: #79c66a;
+  --line: rgba(16, 32, 22, 0.1);
+  --shadow: 0 24px 70px rgba(12, 20, 14, 0.12);
+  --radius: 18px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+/* Structural Classes used by the React components */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.brand span span {
+  color: var(--leaf);
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(12, 20, 14, 0.14);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brand:hover .brand-mark {
+    transform: rotate(-4deg) scale(1.04);
+    box-shadow: 0 14px 28px rgba(12, 20, 14, 0.18);
   }
 }
