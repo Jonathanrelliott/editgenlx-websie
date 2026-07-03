@@ -21,6 +21,9 @@ export default function Header() {
           <a href="#portfolio-explorer" className="font-semibold text-sm text-[#566258] hover:text-[#4d9e57] transition">
             Galleries
           </a>
+          <Link href="/auth" className="font-semibold text-sm text-[#566258] hover:text-[#4d9e57] transition">
+            Login / Signup
+          </Link>
           <a href="#contact" className="bg-[#4d9e57] text-white px-4 py-2 rounded-full text-xs font-bold tracking-wide hover:bg-[#173022] transition">
             Book Session
           </a>

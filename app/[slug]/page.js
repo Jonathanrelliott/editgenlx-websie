@@ -1,7 +1,86 @@
-'use client'; 
+'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Download } from 'lucide-react';
+import Image from 'next/image';
+
+const BLUR_PLACEHOLDER =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjE2IiBoZWlnaHQ9IjE2IiBmaWxsPSIjZTllOWU5Ii8+PC9zdmc+';
+
+function getQualityProfile() {
+  const profile = {
+    lowQuality: 30,
+    highQuality: 60,
+    upgradeDelayMs: 250,
+  };
+
+  if (typeof navigator === 'undefined') return profile;
+
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (!connection) return profile;
+
+  if (connection.saveData) {
+    return { lowQuality: 20, highQuality: 40, upgradeDelayMs: 1500 };
+  }
+
+  const effectiveType = connection.effectiveType || '';
+  const downlink = Number(connection.downlink || 0);
+
+  if (effectiveType.includes('2g')) {
+    return { lowQuality: 20, highQuality: 40, upgradeDelayMs: 1800 };
+  }
+
+  if (effectiveType.includes('3g') || downlink > 0 && downlink < 1.5) {
+    return { lowQuality: 24, highQuality: 48, upgradeDelayMs: 900 };
+  }
+
+  return profile;
+}
+
+function ProgressiveThumbnail({ photo, onOpen }) {
+  const [shouldLoadHigh, setShouldLoadHigh] = useState(false);
+  const [highLoaded, setHighLoaded] = useState(false);
+  const profile = useMemo(() => getQualityProfile(), []);
+
+  return (
+    <div
+      className="relative aspect-square overflow-hidden rounded-lg shadow-md cursor-pointer"
+      onClick={onOpen}
+    >
+      <Image
+        src={photo.url}
+        alt={photo.title || 'Gallery photo'}
+        fill
+        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"        quality={profile.lowQuality}
+        loading="lazy"
+        placeholder="blur"
+        blurDataURL={BLUR_PLACEHOLDER}
+        onLoad={() => {
+          if (shouldLoadHigh) return;
+          setTimeout(() => setShouldLoadHigh(true), profile.upgradeDelayMs);
+        }}
+        className={`object-cover transition-all duration-700 ${
+          highLoaded ? 'opacity-0 blur-sm scale-105' : 'opacity-100'
+        }`}
+      />
+
+      {shouldLoadHigh && (
+        <Image
+          src={photo.url}
+          alt={photo.title || 'Gallery photo'}
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
+          quality={profile.highQuality}
+          loading="lazy"
+          onLoad={() => setHighLoaded(true)}
+          className={`object-cover transition-opacity duration-700 ${
+            highLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function GalleryPage({ params }) {
   const [gallery, setGallery] = useState(null);
@@ -22,20 +101,47 @@ export default function GalleryPage({ params }) {
   }, [params]);
 
   const handleDownload = async (url, fileName) => {
+    const safeName = fileName || 'photo.jpg';
+
+    // Mobile browsers on HTTP may block file-based sharing/downloading.
+    // Open the original image as a fallback so users can long-press to save.
+    const openForManualSave = () => {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      alert('Image opened in a new tab. Long-press it and choose Save Image.');
+    };
+
     try {
       const response = await fetch(url);
       const blob = await response.blob();
+
+      if (window.isSecureContext && navigator.canShare && navigator.share) {
+        const file = new File([blob], safeName, { type: blob.type || 'image/jpeg' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: safeName });
+          return;
+        }
+      }
+
       const objectUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = fileName || 'photo.jpg';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(objectUrl);
+      try {
+        const a = document.createElement('a');
+        const supportsDownloadAttr = 'download' in HTMLAnchorElement.prototype;
+        a.href = objectUrl;
+        a.download = safeName;
+
+        if (supportsDownloadAttr) {
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          openForManualSave();
+        }
+      } finally {
+        window.URL.revokeObjectURL(objectUrl);
+      }
     } catch (error) {
       console.error("Download failed:", error);
-      alert("Could not download image.");
+      openForManualSave();
     }
   };
 
@@ -48,12 +154,10 @@ export default function GalleryPage({ params }) {
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {gallery.uploadedPhotos?.map((photo, index) => (
-          <img 
-            key={index} 
-            src={photo.url} 
-            alt={photo.title || "Gallery photo"} 
-            className="w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-90 transition"
-            onClick={() => {
+          <ProgressiveThumbnail
+            key={index}
+            photo={photo}
+            onOpen={() => {
               setSelectedPhoto(photo);
               setImageLoading(true); // Reset loader when opening modal
             }}
@@ -80,6 +184,7 @@ export default function GalleryPage({ params }) {
             
             <img 
               src={selectedPhoto.url} 
+              alt={selectedPhoto.title || 'Selected gallery photo'}
               onLoad={() => setImageLoading(false)}
               className={`max-h-[80vh] w-full object-contain mx-auto transition-opacity duration-500 ${
                 imageLoading ? 'opacity-0' : 'opacity-100'

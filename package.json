@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,6 +13,7 @@
     "@aws-sdk/credential-providers": "^3.1077.0",
     "@aws-sdk/s3-request-presigner": "^3.1076.0",
     "bcryptjs": "^3.0.3",
+    "jose": "^6.2.3",
     "lucide-react": "^1.22.0",
     "mailtrap": "^4.6.1",
     "mongodb": "^7.4.0",
