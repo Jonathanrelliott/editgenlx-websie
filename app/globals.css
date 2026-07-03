@@ -50,3 +50,22 @@
     box-shadow: 0 14px 28px rgba(12, 20, 14, 0.18);
   }
 }
+
+/* Safari compatibility for Tailwind backdrop blur utilities */
+.backdrop-blur-sm,
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md {
+    background-color: rgba(246, 241, 232, 0.98);
+  }
+}
