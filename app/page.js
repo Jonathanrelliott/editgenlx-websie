@@ -133,6 +133,32 @@ useEffect(() => {
                   </div>
                   <div className="p-6 space-y-4">
                     <h3 className="font-extrabold text-lg text-[#102016]">{gallery.title}</h3>
+                    <div className="grid grid-cols-2 gap-3 text-xs text-[#566258]">
+                      <div className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+                        <p className="font-bold text-[#102016]">{gallery.uploadedPhotos?.length || 0}</p>
+                        <p>Total photos</p>
+                      </div>
+                      <div className="rounded-xl bg-[#f6f1e8] px-3 py-2">
+                        {gallery.photoPrice > 0 ? (
+                          <>
+                            <p className="font-bold text-[#102016]">{gallery.downloadLimit ?? 0}</p>
+                            <p>Free photos</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-bold text-[#102016]">Free</p>
+                            <p>All photos</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {gallery.photoPrice > 0 ? (
+                      <p className="text-xs font-semibold text-[#566258]">
+                        Photo price: ${gallery.photoPrice.toFixed(2)} each after free photos
+                      </p>
+                    ) : (
+                      <p className="text-xs font-semibold text-[#566258]">Free</p>
+                    )}
                     <Link href={`/${gallery.slug || gallery.id}`}>
                       <button className="w-full py-3 bg-[#102016] hover:bg-[#4d9e57] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
                         Browse Gallery <ExternalLink className="w-3.5 h-3.5" />
