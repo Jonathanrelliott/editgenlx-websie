@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { LogIn, UserPlus, ShieldCheck } from 'lucide-react';
 const INITIAL_LOGIN = { email: '', password: '' };
 const INITIAL_SIGNUP = { name: '', email: '', password: '' };
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState('login');
@@ -224,5 +224,19 @@ export default function AuthPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="min-h-[85vh] flex items-center justify-center px-6 py-16 bg-[radial-gradient(circle_at_20%_20%,rgba(77,158,87,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(23,48,34,0.14),transparent_40%),#f6f1e8]">
+          <div className="text-sm font-bold text-[#102016]">Loading authentication...</div>
+        </section>
+      }
+    >
+      <AuthPageContent />
+    </Suspense>
   );
 }
