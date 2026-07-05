@@ -51,7 +51,8 @@ function ProgressiveThumbnail({ photo, onOpen }) {
         src={photo.url}
         alt={photo.title || 'Gallery photo'}
         fill
-        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"        quality={profile.lowQuality}
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+        quality={profile.lowQuality}
         loading="lazy"
         placeholder="blur"
         blurDataURL={BLUR_PLACEHOLDER}
@@ -87,6 +88,11 @@ export default function GalleryPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [imageLoading, setImageLoading] = useState(true);
+  const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const isIOS = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -100,17 +106,39 @@ export default function GalleryPage({ params }) {
     fetchData();
   }, [params]);
 
+  const openIOSShareSheet = async (url, title) => {
+    if (!navigator.share) return false;
+
+    try {
+      await navigator.share({
+        title,
+        text: 'Save this photo to Photos',
+        url,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleDownload = async (url, fileName) => {
     const safeName = fileName || 'photo.jpg';
 
-    // Mobile browsers on HTTP may block file-based sharing/downloading.
-    // Open the original image as a fallback so users can long-press to save.
     const openForManualSave = () => {
       window.open(url, '_blank', 'noopener,noreferrer');
-      alert('Image opened in a new tab. Long-press it and choose Save Image.');
+      setShowIOSHelp(true);
     };
 
     try {
+      if (isIOS) {
+        const shared = await openIOSShareSheet(url, safeName);
+        if (!shared) {
+          openForManualSave();
+        }
+        setShowIOSHelp(true);
+        return;
+      }
+
       const response = await fetch(url);
       const blob = await response.blob();
 
@@ -120,6 +148,13 @@ export default function GalleryPage({ params }) {
           await navigator.share({ files: [file], title: safeName });
           return;
         }
+
+        await navigator.share({
+          title: safeName,
+          text: 'Save this photo',
+          url,
+        });
+        return;
       }
 
       const objectUrl = window.URL.createObjectURL(blob);
@@ -129,7 +164,7 @@ export default function GalleryPage({ params }) {
         a.href = objectUrl;
         a.download = safeName;
 
-        if (supportsDownloadAttr) {
+        if (supportsDownloadAttr && !isIOS) {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -149,35 +184,44 @@ export default function GalleryPage({ params }) {
   if (!gallery) return <div className="p-10 text-center">Gallery not found.</div>;
 
   return (
-    <div className="p-8">
-      <h1 className="text-4xl font-bold mb-8">{gallery.title}</h1>
-      
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {gallery.uploadedPhotos?.map((photo, index) => (
-          <ProgressiveThumbnail
-            key={index}
-            photo={photo}
-            onOpen={() => {
-              setSelectedPhoto(photo);
-              setImageLoading(true); // Reset loader when opening modal
-            }}
-          />
-        ))}
+    <div className="min-h-screen bg-gradient-to-b from-[#f6f1e8] via-[#fffdf8] to-[#f6f1e8] px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="rounded-3xl border border-black/10 bg-white/70 backdrop-blur-sm p-5 sm:p-7">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#102016]">{gallery.title}</h1>
+          <p className="text-sm text-[#566258] mt-2">
+            {gallery.uploadedPhotos?.length || 0} photos available. Tap any image to view full size.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {gallery.uploadedPhotos?.map((photo, index) => (
+            <ProgressiveThumbnail
+              key={index}
+              photo={photo}
+              onOpen={() => {
+                setSelectedPhoto(photo);
+                setImageLoading(true);
+                setShowIOSHelp(false);
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Full Screen Modal */}
       {selectedPhoto && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-3 sm:p-4">
           <button 
-            className="absolute top-5 right-5 text-white" 
+            className="absolute top-4 right-4 sm:top-5 sm:right-5 text-white bg-black/40 rounded-full p-2" 
             onClick={() => setSelectedPhoto(null)}
+            aria-label="Close photo viewer"
           >
-            <X size={40} />
+            <X size={28} className="sm:w-9 sm:h-9" />
           </button>
           
-          <div className="relative max-w-4xl w-full flex flex-col items-center">
+          <div className="relative max-w-5xl w-full flex flex-col items-center">
             {imageLoading && (
-              <div className="text-white font-bold text-xl animate-pulse absolute">
+              <div className="text-white font-bold text-base sm:text-xl animate-pulse absolute top-6">
                 Loading high-res image...
               </div>
             )}
@@ -186,17 +230,48 @@ export default function GalleryPage({ params }) {
               src={selectedPhoto.url} 
               alt={selectedPhoto.title || 'Selected gallery photo'}
               onLoad={() => setImageLoading(false)}
-              className={`max-h-[80vh] w-full object-contain mx-auto transition-opacity duration-500 ${
+              className={`max-h-[78vh] sm:max-h-[80vh] w-full object-contain mx-auto transition-opacity duration-500 ${
                 imageLoading ? 'opacity-0' : 'opacity-100'
               }`}
             />
             
             <button 
               onClick={() => handleDownload(selectedPhoto.url, selectedPhoto.title)}
-              className="mt-4 flex items-center justify-center gap-2 bg-white text-black px-6 py-3 rounded-full font-bold hover:bg-gray-200 transition w-full max-w-xs"
+              className="mt-4 flex items-center justify-center gap-2 bg-white text-black px-5 py-3 rounded-full font-bold hover:bg-gray-200 transition w-full max-w-sm text-sm sm:text-base"
             >
-              <Download size={20} /> Download Image
+              <Download size={18} /> Save to Photos
             </button>
+
+            {isIOS && (
+              <div className="w-full max-w-sm mt-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-white text-xs sm:text-sm">
+                <p className="font-bold">iPhone / Safari Save Steps</p>
+                <p className="mt-1 text-white/90">Tap Save to Photos, then use one of these:</p>
+                <p className="text-white/80 mt-1">1. Share sheet, then tap Save Image</p>
+                <p className="text-white/80">2. Opened tab, then long-press image and tap Save to Photos</p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowIOSHelp(true);
+                    const shared = await openIOSShareSheet(
+                      selectedPhoto.url,
+                      selectedPhoto.title || 'Photo'
+                    );
+                    if (!shared) {
+                      window.open(selectedPhoto.url, '_blank', 'noopener,noreferrer');
+                    }
+                  }}
+                  className="mt-3 w-full rounded-full bg-white text-black font-bold py-2 hover:bg-gray-200 transition"
+                >
+                  Open Share Sheet
+                </button>
+              </div>
+            )}
+
+            {showIOSHelp && isIOS && (
+              <p className="text-white/80 text-xs sm:text-sm mt-2 text-center">
+                If the share popup did not appear, use the opened image tab and long-press to save.
+              </p>
+            )}
           </div>
         </div>
       )}
